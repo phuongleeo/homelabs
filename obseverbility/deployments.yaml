@@ -1,0 +1,344 @@
+#Ho11y
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ho11y
+  labels:
+    app: ho11y
+spec:
+  selector:
+    matchLabels:
+      app: ho11y
+  template:
+    metadata:
+      labels:
+        app: ho11y
+    spec:
+      serviceAccountName: ho11y
+      terminationGracePeriodSeconds: 5
+      # securityContext:
+      #   fsGroup: 1000
+      #   runAsGroup: 1000
+      #   runAsNonRoot: true
+      #   runAsUser: 1000
+      containers:
+      - name: ho11y
+        image: public.ecr.aws/mhausenblas/ho11y:stable
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8765
+        env:
+        - name: DOWNSTREAM0
+          value: http://backend0:8766"
+        - name: "DOWNSTREAM1"
+          value: http://backend1:8767"
+        - name: "OTEL_RESOURCE_ATTRIB"
+          value: "frontend"
+        - name: "OTEL_EXPORTER_OTLP_ENDPOINT"
+          value: "otel-collector:4317"
+        - name: "HO11Y_INJECT_FAILURE"
+          value: enabled"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 128Mi
+        readinessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8765
+        livenessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          tcpSocket:
+            port: 8765
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ho11y
+  labels:
+    app: ho11y
+spec:
+  type: ClusterIP
+  selector:
+    app: ho11y
+  ports:
+  - name: tcp-ho11y
+    port: 8765
+    targetPort: 8765
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ho11y
+
+#OTEL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      # securityContext:
+      #   fsGroup: 1000
+      #   runAsGroup: 1000
+      #   runAsNonRoot: true
+      #   runAsUser: 1000
+      containers:
+      - name: otel-collector
+        # securityContext:
+        #   allowPrivilegeEscalation: false
+        #   capabilities:
+        #     drop:
+        #       - ALL
+        #   privileged: false
+        #   readOnlyRootFilesystem: true
+        image: otel/opentelemetry-collector-contrib:0.55.0
+        args: ["--config=/conf/otel-collector-config.yaml"]
+        ports:
+        - containerPort: 8006
+        readinessProbe:
+          periodSeconds: 5
+          tcpSocket:
+            port: 8006
+        livenessProbe:
+          periodSeconds: 5
+          tcpSocket:
+            port: 8006
+        volumeMounts:
+        - mountPath: /conf
+          name: otel-collector-config
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 125m
+          requests:
+            cpu: 70m
+            memory: 200Mi
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: otel-collector-config
+          items:
+            - key: otel-collector-config
+              path: otel-collector-config.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  type: ClusterIP
+  selector:
+    app: otel-collector
+  ports:
+  - name: tcp-otel-collector
+    port: 8006
+    targetPort: 8006
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  otel-collector-config: |
+    receivers:
+      fluentforward:
+        endpoint: 0.0.0.0:8006
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 100
+    exporters:
+      logging:
+        loglevel: debug
+      # prometheus:
+      #   endpoint: "0.0.0.0:9292"
+      clickhouse:
+        dsn: tcp://clickhouse-server:9000/default
+        ttl_days: 3
+      jaeger:
+        endpoint: jaeger:14250
+        tls:
+          insecure: true
+    service:
+      telemetry:
+        logs:
+          level: debug
+      pipelines:
+        logs:
+          receivers: [ fluentforward ]
+          processors: [ batch ]
+          exporters: [ logging, clickhouse, jaeger ]
+# Clickhouse
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse
+  labels:
+    app: clickhouse
+spec:
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      serviceAccountName: clickhouse
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: clickhouse
+        image: clickhouse/clickhouse-server
+        ports:
+        - containerPort: 8123 # Web UI
+        - containerPort: 9000 # TCP endpoint
+        resources:
+          requests:
+            cpu: 200m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        readinessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 9000
+        livenessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          tcpSocket:
+            port: 9000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: clickhouse
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-server
+  labels:
+    app: clickhouse
+spec:
+  type: ClusterIP
+  selector:
+    app: clickhouse
+  ports:
+  - name: tcp-clickhouse
+    port: 9000
+    targetPort: 9000
+  - name: tcp-web
+    port: 8123
+    targetPort: 8123
+
+# Jaeger
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  labels:
+    app: jaeger
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      serviceAccountName: jaeger
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.35
+        # args:
+        #   - --grpc-storage-plugin.binary=/etc/jaeger-clickhouse
+        #   - --grpc-storage-plugin.configuration-file=/etc/clickhouse-plugin.config
+        ports:
+        - containerPort: 9090
+        - containerPort: 5778 # interface port
+        - containerPort: 16686 # UI
+        - containerPort: 14250 # Jaeger receives model.proto, which is OTLP over gRPC.
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: "grpc-plugin"
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 128Mi
+        readinessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 16686
+        livenessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          tcpSocket:
+            port: 16686
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jaeger
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  labels:
+    app: jaeger
+spec:
+  type: ClusterIP
+  selector:
+    app: jaeger
+  ports:
+  - name: tcp-9090
+    port: 9090
+    targetPort: 9090
+  - name: tcp-16686
+    port: 16686
+    targetPort: 16686
+  - name: tcp-14250
+    port: 14250
+    targetPort: 14250
+  - name: tcp-5778
+    port: 5778
+    targetPort: 5778
