@@ -66,8 +66,6 @@ metadata:
   name: httpbin-gateway
   namespace: default
 spec:
-  # The selector matches the ingress gateway pod labels.
-  # If you installed Istio using Helm following the standard documentation, this would be "istio=ingress"
   selector:
     istio: ingressgateway
   servers:
