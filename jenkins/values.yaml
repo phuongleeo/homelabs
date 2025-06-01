@@ -30,8 +30,6 @@ credentialsId:
 renderHelmLabels: true
 
 controller:
-  istioIngressGateways:
-    name: jenkins-ingressgateway
   # -- Used for label app.kubernetes.io/component
   componentName: "jenkins-controller"
   image:
@@ -40,11 +38,11 @@ controller:
     # -- Controller image repository
     repository: "jenkins/jenkins"
 
-    # -- Controller image tag override; i.e., tag: "2.440.1-jdk21"
+    # -- Controller image tag override; i.e., tag: "2.440.1-jdk17"
     tag:
 
     # -- Controller image tag label
-    tagLabel: jdk21
+    tagLabel: jdk17
     # -- Controller image pull policy
     pullPolicy: "Always"
   # -- Controller image pull secret
@@ -75,11 +73,12 @@ controller:
   # If you disable the non-Jenkins identity store and instead use the Jenkins internal one,
   # you should revert controller.admin.username to your preferred admin user:
   admin:
+
     # -- Admin username created as a secret if `controller.admin.createSecret` is true
     username: "admin"
     # -- Admin password created as a secret if `controller.admin.createSecret` is true
     # @default -- <random password>
-    password:
+    password: "123456"
 
     # -- The key in the existing admin secret containing the username
     userKey: jenkins-admin-user
@@ -123,12 +122,6 @@ controller:
 
   # Share process namespace to allow sidecar containers to interact with processes in other containers in the same pod
   shareProcessNamespace: false
-
-  # Service links might cause issue if running in a namespace with a large amount of services
-  # that might cause a slow startup when plugins are copied from ref to volume
-  # Set to true to keep previous behavior
-  # See https://github.com/kubernetes/kubernetes/issues/121787
-  enableServiceLinks: false
 
   # Overrides the init container default values
   # -- Resources allocation (Requests and Limits) for Init Container
@@ -177,7 +170,7 @@ controller:
   # If you set this prefix and use ingress controller, then you might want to set the ingress path below
   # I.e., "/jenkins"
   # -- Root URI Jenkins will be served on
-  jenkinsUriPrefix:
+  jenkinsUriPrefix: /jenkins
 
   # -- Enable pod security context (must be `true` if podSecurityContextOverride, runAsUser or fsGroup are set)
   usePodSecurityContext: true
@@ -232,10 +225,6 @@ controller:
   # Use Local to preserve the client source IP and avoids a second hop for LoadBalancer and NodePort type services,
   # but risks potentially imbalanced traffic spreading.
   serviceExternalTrafficPolicy:
-
-  # If enabled, the controller is available through its service before its pods reports ready. Makes startup screen and
-  # auto-reload on restart feature possible.
-  publishNotReadyAddresses:
 
   # -- Jenkins controller service annotations
   serviceAnnotations: {}
@@ -339,7 +328,7 @@ controller:
   agentListenerExternalTrafficPolicy:
   # -- Allowed inbound IP for the agentListener service
   agentListenerLoadBalancerSourceRanges:
-    - 0.0.0.0/0
+  - 0.0.0.0/0
   # -- Disabled agent protocols
   disabledAgentProtocols:
     - JNLP-connect
@@ -381,7 +370,7 @@ controller:
   # set allowed inbound rules on the security group assigned to the controller load balancer
   # -- Allowed inbound IP addresses
   loadBalancerSourceRanges:
-    - 0.0.0.0/0
+  - 0.0.0.0/0
 
   # -- Optionally assign a known public LB IP
   loadBalancerIP:
@@ -404,10 +393,10 @@ controller:
   # Plugins will be installed during Jenkins controller start
   # -- List of Jenkins plugins to install. If you don't want to install plugins, set it to `false`
   installPlugins:
-    - kubernetes:4353.vb_47977da_9417
-    - workflow-aggregator:608.v67378e9d3db_1
-    - git:5.7.0
-    - configuration-as-code:1971.vf9280461ea_89
+    - kubernetes:4203.v1dd44f5b_1cf9
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.2.1
+    - configuration-as-code:1836.vccda_4a_122a_a_e
 
   # If set to false, Jenkins will download the minimum required version of all dependencies.
   # -- Download the minimum required version or latest version of all dependencies
@@ -544,10 +533,6 @@ controller:
     authorizationStrategy: |-
       loggedInUsersCanDoAnything:
         allowAnonymousRead: false
-
-    # -- Annotations for the JCasC ConfigMap
-    configMapAnnotations: {}
-
   # -- Custom init-container specification in raw-yaml format
   customInitContainers: []
   # - name: custom-init
@@ -561,7 +546,7 @@ controller:
       # If false or not-specified, JCasC changes will cause a reboot and will only be applied at the subsequent start-up.
       # Auto-reload uses the http://<jenkins_url>/reload-configuration-as-code endpoint to reapply config when changes to
       # the configScripts are detected.
-      # -- Enable Jenkins Config as Code auto-reload
+      # -- Enables Jenkins Config as Code auto-reload
       enabled: true
       image:
         # -- Registry for the image that triggers the reload
@@ -569,35 +554,15 @@ controller:
         # -- Repository of the image that triggers the reload
         repository: kiwigrid/k8s-sidecar
         # -- Tag for the image that triggers the reload
-        tag: 1.30.3
+        tag: 1.26.1
       imagePullPolicy: IfNotPresent
-      resources:
-        {}
+      resources: {}
         #   limits:
         #     cpu: 100m
         #     memory: 100Mi
         #   requests:
         #     cpu: 50m
         #     memory: 50Mi
-      # -- Enables additional volume mounts for the config auto-reload container
-      additionalVolumeMounts:
-        []
-        #   - name: auto-reload-config
-        #     mountPath: /var/config/logger
-        #   - name: auto-reload-logs
-        #     mountPath: /var/log/auto_reload
-      # -- Config auto-reload logging settings
-      logging:
-        # See default settings https://github.com/kiwigrid/k8s-sidecar/blob/master/src/logger.py
-        configuration:
-          # -- Enables custom log config utilizing using the settings below.
-          override: false
-          logLevel: INFO
-          formatter: JSON
-          logToConsole: true
-          logToFile: false
-          maxBytes: 1024
-          backupCount: 3
 
       # -- The scheme to use when connecting to the Jenkins configuration as code endpoint
       scheme: http
@@ -612,7 +577,7 @@ controller:
       # -- Environment variable sources for the Jenkins Config as Code auto-reload container
       envFrom: []
       # -- Environment variables for the Jenkins Config as Code auto-reload container
-      env: []
+      env: {}
       #   - name: REQ_TIMEOUT
       #     value: "30"
 
@@ -657,7 +622,8 @@ controller:
 
   # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   # -- Node labels for pod assignment
-  nodeSelector: {}
+  nodeSelector:
+    kubernetes.io/hostname: minikube-m03
 
   # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#taints-and-tolerations-beta-feature
   # -- Toleration labels for pod assignment
@@ -685,10 +651,8 @@ controller:
   # ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   # -- Update strategy for StatefulSet
   updateStrategy: {}
-
-  # -- Topology spread constraints
-  topologySpreadConstraints: {}
-
+  IstioIngressGateways:
+    name: jenkins-ingressgateway
   ingress:
     # -- Enables ingress
     enabled: false
@@ -712,8 +676,7 @@ controller:
     # -- Ingress labels
     labels: {}
     # -- Ingress annotations
-    annotations:
-      {}
+    annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
     # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
@@ -920,14 +883,6 @@ agent:
   # -- The name of the pod template to use for providing default values
   defaultsProviderTemplate: ""
 
-  # Useful for not including a serviceAccount in the template if `false`
-  # -- Use `serviceAccountAgent.name` as the default value for defaults template `serviceAccount`
-  useDefaultServiceAccount: true
-
-  # -- Override the default service account
-  # @default -- `serviceAccountAgent.name` if `agent.useDefaultServiceAccount` is `true`
-  serviceAccount:
-
   # For connecting to the Jenkins controller
   # -- Overrides the Kubernetes Jenkins URL
   jenkinsUrl:
@@ -935,10 +890,6 @@ agent:
   # connects to the specified host and port, instead of connecting directly to the Jenkins controller
   # -- Overrides the Kubernetes Jenkins tunnel
   jenkinsTunnel:
-  # -- Disables the verification of the controller certificate on remote connection. This flag correspond to the "Disable https certificate check" flag in kubernetes plugin UI
-  skipTlsVerify: false
-  # -- Enable the possibility to restrict the usage of this agent to specific folder. This flag correspond to the "Restrict pipeline support to authorized folders" flag in kubernetes plugin UI
-  usageRestricted: false
   # -- The connection timeout in seconds for connections to Kubernetes API. The minimum value is 5
   kubernetesConnectTimeout: 5
   # -- The read timeout in seconds for connections to Kubernetes API. The minimum value is 15
@@ -959,7 +910,7 @@ agent:
     # -- Repository to pull the agent jnlp image from
     repository: "jenkins/inbound-agent"
     # -- Tag of the image to pull
-    tag: "3309.v27b_9314fd1a_4-3"
+    tag: "3206.vb_15dcf73f6a_9-3"
   # -- Configure working directory for default agent
   workingDir: "/home/jenkins/agent"
   nodeUsageMode: "NORMAL"
@@ -990,12 +941,12 @@ agent:
       memory: "512Mi"
       # ephemeralStorage:
   livenessProbe: {}
-  #  execArgs: "cat /tmp/healthy"
-  #  failureThreshold: 3
-  #  initialDelaySeconds: 0
-  #  periodSeconds: 10
-  #  successThreshold: 1
-  #  timeoutSeconds: 1
+#    execArgs: "cat /tmp/healthy"
+#    failureThreshold: 3
+#    initialDelaySeconds: 0
+#    periodSeconds: 10
+#    successThreshold: 1
+#    timeoutSeconds: 1
 
   # You may want to change this to true while testing a new image
   # -- Always pull agent container image before build
@@ -1107,27 +1058,14 @@ agent:
   # Doesn't allocate pseudo TTY by default
   # -- Allocate pseudo tty to the side container
   TTYEnabled: false
-  # -- Max number of agents to launch for a whole cluster.
+  # -- Max number of agents to launch
   containerCap: 10
-  # -- Max number of agents to launch for this type of agent
-  instanceCap: 2147483647
   # -- Agent Pod base name
   podName: "default"
 
-  # Enables garbage collection of orphan pods for this Kubernetes cloud. (beta)
-  garbageCollection:
-    # -- When enabled, Jenkins will periodically check for orphan pods that have not been touched for the given timeout period and delete them.
-    enabled: false
-    # -- Namespaces to look at for garbage collection, in addition to the default namespace defined for the cloud. One namespace per line.
-    namespaces: ""
-    # namespaces: |-
-    #   namespaceOne
-    #   namespaceTwo
-    # -- Timeout value for orphaned pods
-    timeout: 300
-
   # -- Allows the Pod to remain active for reuse until the configured number of minutes has passed since the last step was executed on it
   idleMinutes: 0
+
 
   # The raw yaml of a Pod API Object, for example, this allows usage of toleration for agent pods.
   # https://github.com/jenkinsci/kubernetes-plugin#using-yaml-to-define-pod-templates
@@ -1145,8 +1083,6 @@ agent:
 
   # -- Defines how the raw yaml field gets merged with yaml definitions from inherited pod templates. Possible values: "merge" or "override"
   yamlMergeStrategy: "override"
-  # -- Controls whether the defined yaml merge strategy will be inherited if another defined pod template is configured to inherit from the current one
-  inheritYamlMergeStrategy: false
   # -- Timeout in seconds for an agent to be online
   connectTimeout: 100
   # -- Annotations to apply to the pod
@@ -1182,22 +1118,22 @@ agent:
   # controller.JCasC.defaultConfig: true
   # Best reference is https://<jenkins_url>/configuration-as-code/reference#Cloud-kubernetes. The example below creates a python pod template.
   # -- Configures extra pod templates for the default kubernetes cloud
-  podTemplates: {}
-  #  python: |
-  #    - name: python
-  #      label: jenkins-python
-  #      serviceAccount: jenkins
-  #      containers:
-  #        - name: python
-  #          image: python:3
-  #          command: "/bin/sh -c"
-  #          args: "cat"
-  #          ttyEnabled: true
-  #          privileged: true
-  #          resourceRequestCpu: "400m"
-  #          resourceRequestMemory: "512Mi"
-  #          resourceLimitCpu: "1"
-  #          resourceLimitMemory: "1024Mi"
+  podTemplates:
+    python: |
+      - name: python
+        label: jenkins-python
+        serviceAccount: jenkins
+        containers:
+          - name: python
+            image: python:3
+            command: "/bin/sh -c"
+            args: "cat"
+            ttyEnabled: true
+            privileged: true
+            resourceRequestCpu: "400m"
+            resourceRequestMemory: "512Mi"
+            resourceLimitCpu: "1"
+            resourceLimitMemory: "1024Mi"
 
 # Inherits all values from `agent` so you only need to specify values which differ
 # -- Configure additional
@@ -1259,7 +1195,7 @@ persistence:
   # If undefined (the default) or set to null, no storageClassName spec is
   #   set, choosing the default provisioner (gp2 on AWS, standard on GKE, AWS & OpenStack)
   # -- Storage class for the PVC
-  storageClass:
+  storageClass: standard
   # -- Annotations for the PVC
   annotations: {}
   # -- Labels for the PVC
@@ -1267,7 +1203,7 @@ persistence:
   # -- The PVC access mode
   accessMode: "ReadWriteOnce"
   # -- The size of the PVC
-  size: "8Gi"
+  size: "2Gi"
 
   # ref: https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/
   # -- Existing data source to clone PVC from
@@ -1303,15 +1239,13 @@ networkPolicy:
     # -- A map of labels (keys/values) that agent pods must have to be able to connect to controller
     podLabels: {}
     # -- A map of labels (keys/values) that agents namespaces must have to be able to connect to controller
-    namespaceLabels:
-      {}
+    namespaceLabels: {}
       # project: myproject
   externalAgents:
     # -- The IP range from which external agents are allowed to connect to controller, i.e., 172.17.0.0/16
     ipCIDR:
     # -- A list of IP sub-ranges to be excluded from the allowlisted IP range
-    except:
-      []
+    except: []
       # - 172.17.1.0/24
 
 ## Install Default RBAC roles and bindings
@@ -1320,8 +1254,6 @@ rbac:
   create: true
   # -- Whether the Jenkins service account should be able to read Kubernetes secrets
   readSecrets: false
-  # -- Whether the Jenkins service account should be able to use the OpenShift "nonroot" Security Context Constraints
-  useOpenShiftNonRootSCC: false
 
 serviceAccount:
   # -- Configures if a ServiceAccount with this name should be created
@@ -1336,8 +1268,7 @@ serviceAccount:
   extraLabels: {}
   # -- Controller ServiceAccount image pull secret
   imagePullSecretName:
-  # -- Auto-mount ServiceAccount token
-  automountServiceAccountToken: true
+
 
 serviceAccountAgent:
   # -- Configures if an agent ServiceAccount should be created
@@ -1352,8 +1283,6 @@ serviceAccountAgent:
   extraLabels: {}
   # -- Agent ServiceAccount image pull secret
   imagePullSecretName:
-  # -- Auto-mount ServiceAccount token
-  automountServiceAccountToken: true
 
 # -- Checks if any deprecated values are used
 checkDeprecation: true
@@ -1376,4 +1305,4 @@ helmtest:
       # -- Repository of the image used to test the framework
       repository: "bats/bats"
       # -- Tag of the image to test the framework
-      tag: "1.12.0"
+      tag: "v1.10.0"
