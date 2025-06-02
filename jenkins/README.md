@@ -1,45 +1,31 @@
 # Update
-- To update charts, run:
-backup custom values and virtual service template:
-
-```bash
-cp jenkins/templates/virtualservice.yaml ../../
-```
 - Check upstream for new versions: https://artifacthub.io/packages/helm/jenkinsci/jenkins
 
-```bash
-helm repo update
-rm -rf jenkins
-# Pull the latest version of the Jenkins chart
-helm pull jenkinsci/jenkins --version x.x.x --untar
-```
-
-- Move those 2 files back to the jenkins/templates directory:
+# Generate gateway TLS certificate
 
 ```bash
-mv ../../jenkins/templates/virtualservice.yaml jenkins/templates/
+openssl genrsa -out jenkins.key 2048
+openssl req -new -key jenkins.key -out jenkins.csr
+openssl x509 -req -days 365 -in jenkins.csr -signkey jenkins.key -out jenkins.crt
+kubectl -n istio-system create secret tls jenkins-server-tls --cert=jenkins.crt --key=jenkins.key
 ```
-# Add these lines to the controller section of values.yaml
 
-```yaml
-controller:
-  istioIngressGateways:
-    name: jenkins-ingressgateway
-```
-# Test the chart
+
+# Final steps
+- Navigate to the Jenkins UI at `http://your.jenkins.url/jenkins` (replace with your domain).
+- Manage Jenkins > Systems > Jenkins URL: `http://your.jenkins.url/jenkins`
 
 ```bash
-helm template jenkins jenkinsci/jenkins \
+helm template jenkins . \
   --namespace jenkins \
   --create-namespace \
   -f values.yaml
-  -s templates/virtualservice.yaml
 ```
 
 # Jenkins Helm Chart
 
 ```bash
-helm install jenkins jenkinsci/jenkins \
+helm upgrade jenkins . \
   --namespace jenkins \
   --create-namespace \
   -f values.yaml

@@ -11,7 +11,6 @@ openssl genrsa -out argocd-server.key 2048
 openssl req -new -key argocd-server.key -out argocd-server.csr
 openssl x509 -req -days 365 -in argocd-server.csr -signkey argocd-server.key -out argocd-server.crt
 kubectl -n istio-system create secret tls argocd-server-tls --cert=argocd-server.crt --key=argocd-server.key
-kubectl -n istio-system apply -f istio-gateway.yaml
 ```
 
 ```sh

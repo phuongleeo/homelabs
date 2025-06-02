@@ -8,7 +8,7 @@ spec:
   hosts:
   - "*"
   gateways:
-  - {{.Values.controller.istioIngressGateways.name | default "jenkins-ingressgateway"}}
+  - {{.Values.jenkins.controller.istioIngressGateways.name | default "jenkins-ingressgateway"}}
   http:
   - match:
     - uri:
@@ -17,4 +17,9 @@ spec:
     - destination:
         host: {{ template "jenkins.fullname" . }}
         port:
-          number: {{.Values.controller.servicePort}}
+          number: {{.Values.jenkins.controller.servicePort| default 8080}}
+      headers:
+        request:
+          add:
+            X-Forwarded-Host: 192.168.59.20
+            X-Forwarded-Port: '80'

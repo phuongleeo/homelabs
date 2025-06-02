@@ -77,6 +77,8 @@ spec:
     accessLogEncoding: JSON
     defaultConfig:
       proxyMetadata: {}
+      gatewayTopology:
+        numTrustedProxies: 2
       tracing:
         sampling: 10
         custom_tags:
