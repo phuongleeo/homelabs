@@ -145,7 +145,7 @@ egress:
       - protocol: https
         port: 443
         destination: istio-egressgateway.istio-system.svc.cluster.local
-        gateway: istio-egressgateway
+        gateway: argocd-egressgateway
         hosts:
           - "vnexpress.net"
           - "github.com"
@@ -155,7 +155,7 @@ egress:
       - protocol: https
         port: 443
         destination: istio-egressgateway.istio-system.svc.cluster.local
-        gateway: istio-egressgateway
+        gateway: jenkins-egressgateway
         hosts:
           - "sg.mirror.servanamanaged.com"
           - "mirror.freedif.org"

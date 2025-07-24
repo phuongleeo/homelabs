@@ -20,6 +20,5 @@ spec:
     - key: io.kubernetes.pod.namespace
       operator: In
       values:
-      - istio-system
       - backend
       - default
