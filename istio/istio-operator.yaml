@@ -85,10 +85,13 @@ spec:
           my_tag_header:
             header:
               name: host
+      holdApplicationUntilProxyStarts: true
     outboundTrafficPolicy:
       mode: REGISTRY_ONLY
     enableTracing: true
     enablePrometheusMerge: true
+    #kiali version compatibility: https://kiali.io/docs/installation/installation-guide/prerequisites/#version-compatibility
+    #k apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/samples/addons/kiali.yaml
     extensionProviders:
     - envoyOtelAls:
         port: 4317

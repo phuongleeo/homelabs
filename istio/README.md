@@ -39,3 +39,11 @@ $ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/sa
 $ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/addons/prometheus.yaml
 $ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/addons/grafana.yaml
 ```
+
+# Upgrade Istio
+```sh
+# diff old new manifest
+$ istioctl manifest generate >  istio-current-installed.yaml
+$ istioctl manifest generate -f istio-operator.yaml  >  istio-target-install.yaml
+$ istioctl manifest diff istio-current-installed.yaml istio-target-install.yaml
+```
