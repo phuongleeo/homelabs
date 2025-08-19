@@ -122,7 +122,7 @@ gateway:
     egress:
       - name: demo-egressgateway
         selector:
-          service.istio.io/canonical-name: istio-egressgateway
+          service.istio.io/canonical-name: egw-demo
         ports:
           - protocol: TLS
             number: 443
@@ -166,7 +166,7 @@ gateway:
     egress:
       - name: otel-egressgateway
         selector:
-          service.istio.io/canonical-name: istio-egressgateway
+          service.istio.io/canonical-name: egw-otel
         ports:
           - protocol: TLS
             number: 443
@@ -209,9 +209,10 @@ egress:
     rules:
       - protocol: https
         port: 443
-        destination: istio-egressgateway.istio-system.svc.cluster.local
-        gateway: jenkins-egressgateway
+        destination: egw-otel.istio-system.svc.cluster.local
+        gateway: otel-egressgateway
         hosts:
           - "grafana.com"
+          - storage.googleapis.com
 virtualService:
   enabled: false

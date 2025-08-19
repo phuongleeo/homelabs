@@ -9,6 +9,60 @@ spec:
     egressGateways:
     - enabled: true
       name: istio-egressgateway
+      label:
+        service.istio.io/canonical-name: istio-egressgateway
+      k8s:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 40Mi
+        hpaSpec:
+          maxReplicas: 2
+          minReplicas: 1
+        service:
+          ports:
+            - name: https
+              port: 443
+              targetPort: 8443
+              protocol: TCP
+            - name: http
+              port: 80
+              targetPort: 8080
+              protocol: TCP
+            - name: https-custom
+              port: 12443
+              targetPort: 8445
+              protocol: TCP
+    - enabled: true
+      name: egw-demo
+      label:
+        service.istio.io/canonical-name: egw-demo
+      k8s:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 40Mi
+        hpaSpec:
+          maxReplicas: 2
+          minReplicas: 1
+        service:
+          ports:
+            - name: https
+              port: 443
+              targetPort: 8443
+              protocol: TCP
+            - name: http
+              port: 80
+              targetPort: 8080
+              protocol: TCP
+            - name: https-custom
+              port: 12443
+              targetPort: 8445
+              protocol: TCP
+    - enabled: true
+      name: egw-otel
+      label:
+        service.istio.io/canonical-name: egw-otel
       k8s:
         resources:
           requests:
@@ -74,7 +128,7 @@ spec:
   hub: docker.io/istio
   meshConfig:
     accessLogFile: /dev/stdout
-    accessLogEncoding: JSON
+    # accessLogEncoding: JSON
     defaultConfig:
       proxyMetadata: {}
       gatewayTopology:
@@ -95,7 +149,7 @@ spec:
     extensionProviders:
     - envoyOtelAls:
         port: 4317
-        service: opentelemetry-collector.istio-system.svc.cluster.local
+        service: otel-collector.otel.svc.cluster.local
       name: otel
   profile: demo
   tag: 1.21.2
