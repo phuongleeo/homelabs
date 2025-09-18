@@ -965,3 +965,5 @@ opensearch:
     limits:
       memory: 1100Mi
 
+opensearch-dashboards:
+  opensearchHosts: http://opensearch.otel.svc.cluster.local:9200

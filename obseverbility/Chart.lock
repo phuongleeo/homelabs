@@ -1,0 +1,9 @@
+dependencies:
+- name: opentelemetry-demo
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.37.2
+- name: opensearch-dashboards
+  repository: https://opensearch-project.github.io/helm-charts/
+  version: 2.31.0
+digest: sha256:5628c3e75c266df5e9f4ea5dde5cdf5859239d2bab83f37353b4a5a568fc640c
+generated: "2025-09-18T21:28:59.706040939+07:00"
